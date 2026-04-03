@@ -63,6 +63,11 @@
           onQrDetected(code.data);
           return; 
         }
+        // QRが見つからなかった場合、0.3秒待ってから次のスキャンへ
+        setTimeout(() => {
+          requestAnimationFrame(tick);
+        }, 300) 
+        return;
       }
       requestAnimationFrame(tick);
     }
