@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>QRスキャナー</title>
+  <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js"></script>
+  <style>
+    body { text-align: center; font-family: sans-serif; background: #f0f0f0; margin: 0; }
+    #video { width: 100%; max-width: 500px; height: auto; background: #000; }
+    #msg { padding: 20px; font-weight: bold; color: #333; }
+    .loading { color: blue; }
+  </style>
+</head>
+<body>
+  <h2>QRスキャン（外部接続版）</h2>
+  <video id="video" autoplay playsinline></video>
+  <canvas id="canvas" style="display:none;"></canvas>
+  <div id="msg">カメラ準備中...</div>
+
+  <script>
+    // ★ここに自分のGASのURLを貼る
+    const GAS_URL = "https://script.google.com/a/macros/kushiro.ed.jp/s/AKfycbx6DGWuq35HFXeQvaTjypQc65EUXnXqhylTbCnFBv5MPLd9l5uH6zrVhkDa6lPVKP2zWw/exec"; 
+
+    const video = document.getElementById("video");
+    const msg = document.getElementById("msg");
+
+    // カメラ起動
+    navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } })
+      .then(stream => {
+        video.srcObject = stream;
+        msg.innerText = "QRコードをかざしてください";
+        requestAnimationFrame(tick);
+      })
+      .catch(err => {
+        msg.innerText = "カメラエラー: " + err;
+      });
+
+    function tick() {
+      if (video.readyState === video.HAVE_ENOUGH_DATA) {
+        const canvas = document.getElementById("canvas");
+        const ctx = canvas.getContext("2d");
+        canvas.height = video.videoHeight;
+        canvas.width = video.videoWidth;
+        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+        const img = ctx.getImageData(0, 0, canvas.width, canvas.height);
+        const code = jsQR(img.data, img.width, img.height);
+
+        if (code) {
+          sendToGas(code.data);
+          return; // 送信中はループ停止
+        }
+      }
+      requestAnimationFrame(tick);
+    }
+
+    function sendToGas(qrData) {
+      msg.innerText = "送信中: " + qrData;
+      msg.className = "loading";
+
+      fetch(GAS_URL, {
+        method: "POST",
+        body: JSON.stringify({ data: qrData })
+      })
+      .then(res => {
+        msg.innerText = "記録完了！: " + qrData;
+        msg.className = "";
+        setTimeout(tick, 2000); // 2秒後に再開
+      })
+      .catch(err => {
+        msg.innerText = "送信エラー: " + err;
+        setTimeout(tick, 2000);
+      });
+    }
+  </script>
+</body>
+</html>
