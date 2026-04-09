@@ -42,7 +42,7 @@
       osc.stop(audioCtx.currentTime + 0.1);
     }
 
-    navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } })
+    navigator.mediaDevices.getUserMedia({ video: { facingMode: "user" } })
       .then(stream => {
         video.srcObject = stream;
         msg.innerText = "QRをかざしてください";
